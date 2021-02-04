@@ -1,0 +1,243 @@
+#include <htc.h>
+#include "lcd16.h"
+#include <stdlib.h>
+
+void txs(unsigned char val)
+{
+int i;
+while(!TXIF)
+	continue;
+TXREG=val;
+for(i=0;i<1200;i++);
+}
+
+void delay2()
+	{
+	long i;
+	for(i=0;i<10000;i++);
+	}
+
+unsigned char rxs(void)
+{
+int c=0;
+while(!RCIF)
+	{
+		 c++;
+			 if(c>5000)
+			 	break;
+	
+	}
+return RCREG;
+}
+
+unsigned char val[6],flagx=0,val1,val2,val3,val4,val5;
+
+int j=0;
+
+int x;
+int sp,sp1,spt;
+
+
+
+
+	
+void Delay()				                                   
+{
+     long i;
+     for(i=0;i<5000;i++)
+	 	{
+
+
+		}
+}
+
+
+void Delay2()				                                   
+{
+     long i;
+     for(i=0;i<100000;i++)
+	 	{
+
+
+		}
+}
+
+void delay3(unsigned int val)				                                   
+{
+     int i;
+     for(i=0;i<val;i++)
+	 	{
+		}
+}
+
+ 
+ 
+
+void sendtx(unsigned char val[],unsigned char length)
+	{
+	 int i;
+	 for(i=0;i<length;i++)
+	 	{
+			txs(val[i]);
+		}
+	}
+
+/* Sample code to set up the A2D module */
+void init_a2d(void){
+	ADCON0=0;	// select Fosc/2
+	ADCON1=2;	// select left justify result. A/D port configuration 0
+	ADON=1;		// turn on the A2D conversion module
+}
+
+/* Return an 8 bit result */
+unsigned char read_a2d(unsigned char channel){
+	channel&=0x07;	// truncate channel to 3 bits
+	ADCON0&=0xC5;	// clear current channel select
+	ADCON0|=(channel<<3);	// apply the new channel select
+	Delay();
+	GO=1;	// initiate conversion on the selected channel
+	while(GO)continue;
+	return(ADRESH);	// return 8 MSB of the result
+}
+
+
+
+
+void main()			//Main entry
+{
+	CMCON=0x07;
+	RCSTA=0x90;								// receive enabling with the same speed
+	TXSTA =(0x24);					// High speed selection baud rate 9600
+	CVRCON=0x00;
+	TRISD=0x00;
+	TRISE=0x00;
+	Lcdinit();
+
+	init_a2d();
+
+	TRISB=0x00;
+	TRISC=0xF0;
+	TRISD=0x00;
+	TRISE=0x00;
+nRBPU=0;
+RB0=0;
+RB1=0;
+RB2=0;
+RB3=0;
+RB4=0;
+
+	while(1)
+	{
+
+	val1=read_a2d(0)+15;
+
+	Lcdcmd(0x80);
+	lcddata('T');
+	lcddata((val1/100)+0x30);
+	lcddata(((val1%100)/10)+0x30);
+	lcddata((val1%10)+0x30);
+	
+			
+	val2=read_a2d(2);;
+
+	Lcdcmd(0x85);
+	lcddata('R');
+	lcddata((val2/100)+0x30);
+	lcddata(((val2%100)/10)+0x30);
+	lcddata((val2%10)+0x30);	
+
+
+	val3=read_a2d(1);;
+
+	Lcdcmd(0x8A);
+	lcddata('H');
+	lcddata((val4/100)+0x30);
+	lcddata(((val4%100)/10)+0x30);
+	lcddata((val4%10)+0x30);	
+
+	if(val1>35)
+	{
+		Lcdcmd(0xc0);
+		lcddisp("Temp High          ");
+	}
+	else if(val2>50)
+	{
+		Lcdcmd(0xc0);
+		lcddisp("Resp High          ");
+	}
+	else if(val4>75)
+	{
+		Lcdcmd(0xc0);
+		lcddisp("HB High            ");
+	}	
+	else
+	{
+		Lcdcmd(0xc0);
+		lcddisp("                 ");
+	}
+
+	
+
+	if(val3<100)
+		{
+			if(oc==0)
+			{
+			hb++;
+			oc=1;
+			}
+		}
+	else
+		{
+			oc=0;
+		}
+
+	if(hbt==60)
+		{
+			if(hb>4)
+			val4=62+(hb%20);
+			hb=0;
+			hbt=0;
+		}
+	
+
+	if(cc==0)
+	{
+
+	sendtx("Temp=",5);
+	txs((val1/100)+0x30);
+	txs(((val1%100)/10)+0x30);
+	txs((val1%10)+0x30);	
+	sendtx("_Resp=",6);
+	txs((val2/100)+0x30);
+	txs(((val2%100)/10)+0x30);
+	txs((val2%10)+0x30);	
+	sendtx("_HB=",4);
+	txs((val4/100)+0x30);
+	txs(((val4%100)/10)+0x30);
+	txs((val4%10)+0x30);	
+	if(val1>35)
+	{
+		sendtx("_Temp High",10);
+	}
+	else if(val2>50)
+	{
+		sendtx("_Resp High",10);
+	}
+	else if(val4>75)
+	{
+		sendtx("_HB High",8);
+	}
+else
+{
+		sendtx("_Normal",7);
+}	
+
+
+	}
+
+
+
+
+	}
+
+}
